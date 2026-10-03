@@ -4,7 +4,8 @@ import { BadRequestError, UnauthorizedError,
          NotFoundError, ForbiddenError } from "./errors.js";
 import { createChirp, deleteChirp, getChirp } from "./db/queries/chirps.js";
 import { checkPasswordHash, validateJWT, makeJWT, 
-         getBearerToken,  makeRefreshToken, hashPassword } from "./auth.js";
+         getBearerToken,  makeRefreshToken, hashPassword,
+         getAPIKey } from "./auth.js";
 import { getUserByEmail, updateUser, 
          upgradeUserToChirpyRed } from "./db/queries/users.js";
 import { createRefreshToken, revokeRefreshToken, 
@@ -226,6 +227,12 @@ export async function deleteChirpHandler(req: Request, res: Response) {
 // *****************************************
 
 export async function polkaWebhookHandler(req: Request, res: Response) {
+  const apiKey = getAPIKey(req);
+
+  if (apiKey !== config.api.polkaKey) {
+    throw new UnauthorizedError("Invalid API key");
+  }
+
   if (req.body.event !== "user.upgraded") {
     res.status(204).send();
     return;

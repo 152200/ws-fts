@@ -43,7 +43,31 @@ app.post("/api/users", async (req: Request, res: Response) => {
 });
 app.post("/api/chirps", handlerValidateChirp);
 app.get("/api/chirps", async (req: Request, res: Response) => {
-  const chirps = await getChirps();
+  let authorId = "";
+
+  const authorIdQuery = req.query.authorId;
+
+  if (typeof authorIdQuery === "string") {
+    authorId = authorIdQuery;
+  }
+
+  let sort = "asc";
+
+  const sortQuery = req.query.sort;
+
+  if (typeof sortQuery === "string") {
+    sort = sortQuery;
+  }
+
+  const chirps = await getChirps(authorId);
+
+  chirps.sort((a, b) => {
+    if (sort === "desc") {
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    }
+
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
 
   res.status(200).json(chirps);
 });
