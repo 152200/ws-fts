@@ -1,7 +1,9 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { handlerReadiness, handlerMetrics, 
          handlerReset, handlerValidateChirp, 
-         handlerLogin, refreshHandler, revokeHandler } from './handlers.js';
+         handlerLogin, refreshHandler, revokeHandler,
+	 updateUsersHandler, deleteChirpHandler,
+         polkaWebhookHandler } from './handlers.js';
 import { middlewareLogResponses, middlewareMetricsInc, middlewareErrorHandler } from './middlewares.js';
 import { config } from "./config.js";
 import postgres from "postgres";
@@ -58,6 +60,9 @@ app.get("/api/chirps/:chirpId", async (req: Request, res: Response) => {
 app.post("/api/login", handlerLogin);
 app.post("/api/refresh", refreshHandler);
 app.post("/api/revoke", revokeHandler);
+app.put("/api/users", updateUsersHandler);
+app.delete("/api/chirps/:chirpId", deleteChirpHandler);
+app.post("/api/polka/webhooks", polkaWebhookHandler);
 app.get("/admin/metrics", handlerMetrics);
 // app.post("/admin/reset", handlerReset);
 app.post("/admin/reset", async (req: Request, res: Response) => {

@@ -60,18 +60,18 @@ export function getBearerToken(req: Request): string {
   const authHeader = req.get("Authorization");
 
   if (!authHeader) {
-    throw new Error("Missing Authorization header");
+    throw new UnauthorizedError("Missing Authorization header");
   }
 
   const [scheme, token] = authHeader.split(" ");
 
   if (scheme !== "Bearer" || !token) {
-    throw new Error("Invalid Authorization header");
+    throw new UnauthorizedError("Invalid Authorization header");
   }
 
   return token;
 }
-
+  
 export function makeRefreshToken(): string {
   return randomBytes(32).toString("hex");
 }

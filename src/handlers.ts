@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
 import { config } from "./config.js";
-import { BadRequestError, UnauthorizedError } from "./errors.js";
-import { createChirp } from "./db/queries/chirps.js";
+import { BadRequestError, UnauthorizedError,
+         NotFoundError, ForbiddenError } from "./errors.js";
+import { createChirp, deleteChirp, getChirp } from "./db/queries/chirps.js";
 import { checkPasswordHash, validateJWT, makeJWT, 
-         getBearerToken,  makeRefreshToken } from "./auth.js";
-import { getUserByEmail } from "./db/queries/users.js";
+         getBearerToken,  makeRefreshToken, hashPassword } from "./auth.js";
+import { getUserByEmail, updateUser, 
+         upgradeUserToChirpyRed } from "./db/queries/users.js";
 import { createRefreshToken, revokeRefreshToken, 
          getUserFromRefreshToken } from "./db/queries/refreshTokens.js";
+
 
 export function handlerReadiness(req: Request, res: Response) {
   res.set("Content-Type", "text/plain; charset=utf-8");
@@ -166,6 +169,75 @@ export async function revokeHandler(req: Request, res: Response) {
   const token = getBearerToken(req);
 
   await revokeRefreshToken(token);
+
+  res.status(204).send();
+}
+
+// ************************************************
+
+export async function updateUsersHandler(req: Request, res: Response) {
+  const token = getBearerToken(req);
+
+  const userId = validateJWT(
+    token,
+    config.api.jwtSecret,
+  );
+
+  const hashedPassword = await hashPassword(
+    req.body.password,
+  );
+
+  const user = await updateUser(
+    userId,
+    req.body.email,
+    hashedPassword,
+  );
+
+  const { hashedPassword: _, ...userResponse } = user;
+
+  res.status(200).json(userResponse);
+}
+
+// *****************************************************
+
+export async function deleteChirpHandler(req: Request, res: Response) {
+  const token = getBearerToken(req);
+
+  const userId = validateJWT(
+    token,
+    config.api.jwtSecret,
+  );
+
+  const chirp = await getChirp(req.params.chirpId as string);
+
+  if (!chirp) {
+    throw new NotFoundError("Chirp not found");
+  }
+
+  if (chirp.userId !== userId) {
+    throw new ForbiddenError("Forbidden");
+  }
+
+  await deleteChirp(chirp.id);
+
+  res.status(204).send();
+}
+
+// *****************************************
+
+export async function polkaWebhookHandler(req: Request, res: Response) {
+  if (req.body.event !== "user.upgraded") {
+    res.status(204).send();
+    return;
+  }
+
+  const userId = req.body.data.userId;
+
+  const user = await upgradeUserToChirpyRed(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
 
   res.status(204).send();
 }
